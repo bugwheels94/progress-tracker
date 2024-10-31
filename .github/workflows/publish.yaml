@@ -1,0 +1,35 @@
+name: Release
+"on":
+  push:
+    branches:
+      - master
+      - next
+      - alpha
+      - next-major
+      - beta
+      - "*.x"
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: 20
+          cache-dependency-path: package.json
+      - run: npm i
+      - run: npm run build
+      # - run: zip -r dist.zip dist
+      # - run: npx semantic-release
+      #   env:
+      #     HUSKY: 0
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: netlify deploy --dir=dist --prod --site pomodoro-nudge
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

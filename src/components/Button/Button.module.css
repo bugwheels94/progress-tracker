@@ -1,0 +1,18 @@
+.button {
+	display: inline-flex;
+	align-items: center;
+	font-size: 1.6rem;
+	background: black;
+	border-radius: 0.5rem;
+	color: #fff;
+	padding: 0.5rem 0.5rem;
+
+	& > .blue {
+		color: blue
+	}
+
+}
+.button {
+	padding: 0.5rem 1.5rem;
+	
+}
