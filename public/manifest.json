@@ -1,0 +1,19 @@
+{
+  "name": "Automatic Pomodoro Timer",
+  "short_name": "AutomaticPomodoroTimer",
+  "description": "This Pomodoro Timer automatically starts the next timer for you.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2196f3",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "72x72",
+      "type": "image/svg"
+    }
+  ],
+  "scope": "/",
+  "lang": "en"
+}

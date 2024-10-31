@@ -1,14 +1,26 @@
 .popup {
   display: flex;
   height: 100%;
-  gap: 20px;
-  align-items: center;
   flex-direction: column;
-  justify-content: center;
   padding: 10px;
   font-size: 16px;
 }
+
 .actions {
   display: flex;
   gap: 20px;
+}
+
+.footer {
+  text-align: center;
+}
+
+.bodyContainer {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+
+  justify-content: center;
 }

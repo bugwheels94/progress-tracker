@@ -23,6 +23,9 @@ export default function Home() {
   const [state, setState] = useState<PomodoroStatus>(PomodoroStatus.IDLE);
   const [lastNudgeTime, setLastNudgeTime] = useState(0);
 
+  useEffect(() => {
+    window.resizeTo(200, 100);
+  }, []);
   const patchActivityMutation = useMutation({
     mutationFn: patchActivity,
     onSuccess: (_, { young }) => {
@@ -129,23 +132,37 @@ export default function Home() {
     };
   }, [openWindow]);
   return (
-    <PagePopup
-      actions={
-        <>
-          <Button onClick={() => openWindow("/app")}>Show Dashboard</Button>
-        </>
-      }
-    >
-      <h1
-        style={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+    <>
+      <PagePopup
+        footer={
+          <span
+            style={{
+              color: "red",
+              fontStyle: "italic",
+              textTransform: "uppercase",
+            }}
+          >
+            {" "}
+            Do Not Close
+          </span>
+        }
+        actions={
+          <>
+            <Button onClick={() => openWindow("/app")}>Show Dashboard</Button>
+          </>
+        }
       >
-        {state}
-      </h1>
-    </PagePopup>
+        <h1
+          style={{
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {state}
+        </h1>
+      </PagePopup>
+    </>
   );
 }
