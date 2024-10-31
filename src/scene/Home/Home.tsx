@@ -110,7 +110,7 @@ export default function Home() {
       } else {
         if (firstRun.current) openWindow("/projects/" + activity.projectId);
         else {
-          if (activity.lastActive < Date.now() - 0.1 * 60 * 1000) {
+          if (activity.lastActive < Date.now() - 25 * 60 * 1000) {
             patchActivityMutation.mutate({
               old: activity,
               young: { status: Status.Paused },
