@@ -8,7 +8,7 @@ import {
   putActivity,
   Status,
 } from "./services/tasks";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { FixedSizeList } from "react-window";
 import { useSwipeable } from "react-swipeable";
 
@@ -39,13 +39,20 @@ function emotionColorAndEmoji(percent: number) {
 
   // Emoji Scale
   let emoji;
-  if (percent <= 10) emoji = "😢"; // Very sad
-  else if (percent <= 25) emoji = "😞"; // Sad
-  else if (percent <= 40) emoji = "😐"; // Neutral-Sad
-  else if (percent <= 50) emoji = "😶"; // Neutral (Blue zone)
-  else if (percent <= 60) emoji = "🙂"; // Slightly happy
-  else if (percent <= 75) emoji = "😊"; // Happy
-  else if (percent <= 90) emoji = "😄"; // Very happy
+  if (percent <= 10)
+    emoji = "😢"; // Very sad
+  else if (percent <= 25)
+    emoji = "😞"; // Sad
+  else if (percent <= 40)
+    emoji = "😐"; // Neutral-Sad
+  else if (percent <= 50)
+    emoji = "😶"; // Neutral (Blue zone)
+  else if (percent <= 60)
+    emoji = "🙂"; // Slightly happy
+  else if (percent <= 75)
+    emoji = "😊"; // Happy
+  else if (percent <= 90)
+    emoji = "😄"; // Very happy
   else emoji = "😁"; // Super happy
 
   return { color: `rgb(${r}, ${g}, ${b})`, emoji };
@@ -92,6 +99,7 @@ function Project() {
         <div className="mb-4">
           <ActivityForm activities={activities} />
         </div>
+        <TagsList activities={activities} />
 
         {/* Activity List */}
         <div className="flex flex-row gap-4">
@@ -332,4 +340,27 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
     </form>
   );
 }
+
+const TagsList = ({ activities }: { activities: Activity[] }) => {
+  const tags = useMemo(() => {
+    const uniqueTags = new Set(
+      [...activities.map((a) => a.tag)].filter(Boolean)
+    );
+
+    return Array.from(uniqueTags);
+  }, [activities]);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {[""].concat(tags).map((tag) => (
+        <Link
+          key={tag}
+          to={`/${tag}`}
+          className="px-3 py-1 my-2 bg-blue-100 text-blue-700 rounded-md text-sm hover:bg-blue-200 transition"
+        >
+          {tag || "Reset"}
+        </Link>
+      ))}
+    </div>
+  );
+};
 export default Project;
