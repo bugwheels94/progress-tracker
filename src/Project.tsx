@@ -67,7 +67,7 @@ function Project() {
           100,
           ((activities || [])
             .filter((a) =>
-              a.finishedOn.includes(new Date().toLocaleDateString("en-CA"))
+              a.finishedOn?.includes(new Date().toLocaleDateString("en-CA"))
             )
             .reduce((acc, a) => acc + (a.estimation || 0), 0) *
             100) /
