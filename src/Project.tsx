@@ -306,6 +306,7 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
         type="number"
         min="0"
         max="8"
+        step="0.25"
         value={estimation}
         onChange={(e) => setEstimation(Number(e.target.value))}
         className="border border-gray-300 rounded-md p-2 w-24 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 grow"
