@@ -13,26 +13,30 @@
 		outline: none;
 		padding: 0 2rem;
 	}
+	& > button {
+		font-size: 1.6rem;
+		background: black;
+		border-radius: 0.5rem;
+		color: #fff;
+		padding: 0.5rem 1.5rem;
+	}
 }
-
 .formContainer {
-	margin: 1rem 1rem 1rem 0rem;
+	margin: 1rem;
 	background: #fff;
 	border-radius: 2rem;
 	padding: 2rem;
-	height: 100vh;
 	overflow: auto;
 }
 .action {
+	background-color: #efefef;
+	border-radius: 50%;
+	border: solid 1px #ccc;
 	width: 2rem;
 	height: 2rem;
-	padding: 1rem 2rem !important;
 	justify-content: center;
 	display: inline-flex;
 	align-items: center;
-	border: solid 1px #ccc;
-	background-color: #efefef !important;
-	border-radius: 0.5rem;
 }
 .listItem {
 	display: flex;
@@ -40,6 +44,12 @@
 	padding: 2rem;
 	font-size: 1.4rem;
 	border-bottom: solid 1px #ccc;
+}
+.complete {
+	&::before {
+		content: "\2713 ";
+		font-size: 1.6rem;
+	}
 }
 
 .buttonStatus {
@@ -57,14 +67,6 @@
 		border-color: transparent transparent transparent #404040;
 	}
 }
-.complete {
-	cursor: default;
-	&::before {
-		content: "🏁";
-		font-size: 1.6rem;
-	}
-}
-
 .play {
 	composes: buttonStatus;
 	border-style: solid;
@@ -76,10 +78,4 @@
 
 	border-style: double;
 	border-width: 0px 0 0px 1rem;
-}
-
-.sidebarContainer {
-	display: flex;
-	flex-direction: column;
-	padding: 1rem;
 }
