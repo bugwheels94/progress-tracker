@@ -25,6 +25,7 @@ jobs:
           cache-dependency-path: package.json
       - run: npm i
       - run: npm run build
+      - run: npm install netlify-cli -g
       # - run: zip -r dist.zip dist
       # - run: npx semantic-release
       #   env:
