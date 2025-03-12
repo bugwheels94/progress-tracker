@@ -5,63 +5,73 @@ import find from "pouchdb-find";
 PouchDB.plugin(find);
 const db = new PouchDB<ReturnType<typeof createActivity>>("activities");
 db.createIndex({
-	index: {
-		fields: ["status", "createdAt"],
-	},
+  index: {
+    fields: ["status", "createdAt"],
+  },
 });
-enum Status {
-	Paused,
-	Idle,
-	Active,
-	Done,
+export enum Status {
+  Idle = 1,
+  Active = 0,
+  Done = 2,
 }
 function createActivity() {
-	return {
-		startedAt: Date.now(),
-		timeSpent: 0,
-		status: Status.Idle,
-		createdAt: Date.now(),
-		projectId: "",
-		title: "",
-	};
+  return {
+    inProgress: false,
+    createdAt: Date.now(),
+    estimation: 0,
+    tag: "",
+    title: "",
+    finishedOn: [] as string[], // days in which the task was finished
+    repeatsDaily: false, // days
+    _id: nanoid(),
+  };
+}
+export function getActivityStatus(a: Activity) {
+  const today = new Date().toLocaleDateString("en-CA");
+
+  return a.inProgress
+    ? Status.Active
+    : (a.finishedOn?.length && !a.repeatsDaily) ||
+      ((a.finishedOn || []).includes(today) && a.repeatsDaily)
+    ? Status.Done
+    : Status.Idle;
 }
 export type Activity = ReturnType<typeof createActivity>;
-export async function getActivities(projectId: string) {
-	try {
-		const docs = await db.find({
-			selector: { projectId },
-		});
-		console.log("k2", docs);
-		let docs2 = docs.docs;
-		// for (var i = 0; i < 20; i++) {
-		// 	docs2 = docs2.concat(docs2);
-		// }
-		docs2.sort((a, b) => {
-			// Define the order of statuses
+export async function getActivities(tag: string): Promise<Activity[]> {
+  try {
+    const docs = tag
+      ? await db.find({ selector: { tag } })
+      : await db.find({ selector: {} });
 
-			// First, compare by status
-			const statusComparison = a.status - b.status;
-			if (statusComparison !== 0) {
-				return statusComparison; // Sort by status first
-			}
+    let docs2: Activity[] = docs.docs as Activity[];
 
-			// If statuses are the same, sort by createdAt (earliest first)
-			return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-		});
-		return docs2;
-	} catch (e) {
-		console.log("hii", e);
-	}
+    docs2.sort((a, b) => {
+      if (!a || !b) return 0;
+      const statusComparison = getActivityStatus(a) - getActivityStatus(b);
+      if (statusComparison !== 0) {
+        return statusComparison;
+      }
+
+      // If statuses are the same, sort by createdAt (earliest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return docs2;
+  } catch (e) {
+    console.error("Error fetching activities:", e);
+    return []; // Ensure it always returns Activity[]
+  }
 }
-export async function postActivity(doc: { projectId: string; title: string }) {
-	console.log("positng activit");
-	try {
-		await db.put({
-			...createActivity(),
-			...doc,
-			_id: nanoid(),
-		});
-	} catch (e) {
-		console.log(e);
-	}
+export async function putActivity(
+  doc: Partial<Activity>,
+  original: Activity = createActivity()
+) {
+  try {
+    await db.put({
+      ...original,
+      ...doc,
+    });
+  } catch (e) {
+    console.log(e);
+  }
 }

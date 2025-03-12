@@ -22,11 +22,10 @@
 	}
 }
 .formContainer {
-	margin: 1rem 1rem 1rem 0rem;
+	margin: 1rem;
 	background: #fff;
 	border-radius: 2rem;
 	padding: 2rem;
-	height: 100vh;
 	overflow: auto;
 }
 .action {
