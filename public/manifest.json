@@ -1,7 +1,7 @@
 {
-  "name": "Automatic Pomodoro Timer",
-  "short_name": "AutomaticPomodoroTimer",
-  "description": "This Pomodoro Timer automatically starts the next timer for you.",
+  "name": "Progress Tracker",
+  "short_name": "ProgressTracker",
+  "description": "This Progress Tracker just works! Output based tracker",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
