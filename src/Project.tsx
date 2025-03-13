@@ -124,11 +124,20 @@ function ActivityList({
     [activities, status]
   );
   return (
-    <ul className=" border border-gray-200 rounded-lg flex-col flex flex-1">
-      {filteredActivities.map((activity) => (
-        <ActivityItem key={activity._id} activity={activity} />
-      ))}
-    </ul>
+    <div className="flex flex-col flex-1 border border-gray-200 rounded-lg">
+      <h2 className="text-lg font-semibold px-4 py-2 bg-gray-100 border-b">
+        {status === Status.Idle
+          ? "To Do"
+          : status === Status.Active
+            ? "In Progress"
+            : "Done"}
+      </h2>
+      <ul className="flex flex-col flex-1">
+        {filteredActivities.map((activity) => (
+          <ActivityItem key={activity._id} activity={activity} />
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -181,16 +190,17 @@ function ActivityItem({ activity }: { activity: Activity }) {
     <li
       {...handlers}
       key={activity._id}
-      className="flex items-center p-1 border-b last:border-none hover:bg-gray-100 transition"
+      className="flex items-center p-1 border-b last:border-none hover:bg-gray-100 transition relative"
       onDoubleClick={() => {
         deleteActivity(activity);
       }}
     >
       {/* Action Button */}
-
       {/* Activity Title */}
       <h3 className="ml-4 py-6 text-lg font-semibold">{activity.title}</h3>
-
+      <span className="absolute right-1 top-1 bg-cyan-500 text-white px-3 py-1 rounded-md text-sm  ">
+        {activity.estimation} hours
+      </span>
       {/* Time Spent */}
     </li>
   );
