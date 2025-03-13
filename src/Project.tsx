@@ -7,9 +7,9 @@ import {
   getActivityStatus,
   putActivity,
   Status,
+  useDeleteActivity,
 } from "./services/tasks";
 import { Link, useParams } from "react-router-dom";
-import { FixedSizeList } from "react-window";
 import { useSwipeable } from "react-swipeable";
 
 function emotionColorAndEmoji(percent: number) {
@@ -124,39 +124,15 @@ function ActivityList({
     [activities, status]
   );
   return (
-    <ul className=" border border-gray-200 rounded-lg flex-col flex grow">
-      <FixedSizeList
-        height={Math.min(
-          screen.height - 100,
-          (filteredActivities?.length || 1) * 70
-        )}
-        width={"100%"}
-        itemSize={70}
-        itemCount={filteredActivities?.length || 0}
-      >
-        {({ index, style }) => {
-          const activity = filteredActivities?.[index];
-          if (!activity) return null;
-          return (
-            <ActivityItem
-              key={activity._id}
-              activity={activity}
-              style={style}
-            />
-          );
-        }}
-      </FixedSizeList>
+    <ul className=" border border-gray-200 rounded-lg flex-col flex flex-1">
+      {filteredActivities.map((activity) => (
+        <ActivityItem key={activity._id} activity={activity} />
+      ))}
     </ul>
   );
 }
 
-function ActivityItem({
-  activity,
-  style,
-}: {
-  activity: Activity;
-  style: React.CSSProperties;
-}) {
+function ActivityItem({ activity }: { activity: Activity }) {
   const { tag = "" } = useParams();
 
   const handlers = useSwipeable({
@@ -200,22 +176,17 @@ function ActivityItem({
       });
     },
   });
+  const { mutate: deleteActivity } = useDeleteActivity(tag);
   return (
     <li
       {...handlers}
-      style={style}
       key={activity._id}
-      className="flex items-center p-4 border-b last:border-none hover:bg-gray-100 transition"
+      className="flex items-center p-1 border-b last:border-none hover:bg-gray-100 transition"
       onDoubleClick={() => {
-        mutate({
-          inProgress: !activity.inProgress,
-        });
+        deleteActivity(activity);
       }}
     >
       {/* Action Button */}
-      <button className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition">
-        <i className="text-gray-500">⏸</i>
-      </button>
 
       {/* Activity Title */}
       <h3 className="ml-4 text-lg font-semibold">{activity.title}</h3>
@@ -227,20 +198,20 @@ function ActivityItem({
 export function ActivityForm({ activities }: { activities: Activity[] }) {
   const { tag: tagParam = "" } = useParams();
   const [tag, setTag] = useState("");
-  const [tagSearch, setTagSearch] = useState("");
+  const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
   const [repeatsDaily, setRepeatsDaily] = useState(false);
   const [title, setTitle] = useState("");
-  const [estimation, setEstimation] = useState(0);
+  const [estimation, setEstimation] = useState(1);
 
   const suggestions = useMemo(() => {
-    if (!tagSearch) return [];
+    if (!tag) return [];
 
     const uniqueTags = new Set(
-      [tagSearch, ...activities.map((a) => a.tag)].filter(Boolean)
+      [tag, ...activities.map((a) => a.tag)].filter(Boolean)
     );
 
     return Array.from(uniqueTags);
-  }, [tagSearch, activities]);
+  }, [tag, activities]);
   const queryClient = useQueryClient();
   const activityMutation = useMutation({
     mutationFn: putActivity,
@@ -266,7 +237,7 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
   );
   return (
     <form
-      className="flex flex-row gap-2 p-2 rounded-xl w-full  mx-auto"
+      className="flex flex-row gap-2 p-2 rounded-xl w-full mx-auto flex-wrap align-center"
       onSubmit={(e) => {
         e.preventDefault();
         greet();
@@ -279,26 +250,31 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
         id="greet-input"
         onChange={(e) => setTitle(e.currentTarget.value)}
         placeholder="Create new activity..."
-        className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 "
+        className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 grow"
       />
 
       {/* Tag Input with Auto-Suggest */}
       <div className="relative z-10">
         <input
           type="text"
-          value={tagSearch || tag}
-          onChange={(e) => setTagSearch(e.target.value)}
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+          onFocus={() => {
+            setIsSuggestionVisible(true);
+          }}
+          onBlur={() => {
+            setTimeout(() => setIsSuggestionVisible(false), 100);
+          }}
           placeholder="Add a tag..."
           className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
         />
-        {suggestions.length > 0 && (
+        {suggestions.length > 0 && isSuggestionVisible && (
           <ul className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg mt-1  overflow-hidden">
             {suggestions.map((suggestion) => (
               <li
                 key={suggestion}
                 onClick={() => {
                   setTag(suggestion);
-                  setTagSearch("");
                 }}
                 className="p-3 cursor-pointer hover:bg-gray-100 text-gray-700"
               >
@@ -309,34 +285,51 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
         )}
       </div>
 
-      <input
-        id="estimation"
-        type="number"
-        min="0"
-        max="8"
-        step="0.25"
-        value={estimation}
-        onChange={(e) => setEstimation(Number(e.target.value))}
-        className="border border-gray-300 rounded-md p-2 w-24 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 grow"
-      />
       {/* Repeat Daily Toggle */}
-      <label className="flex items-center gap-2 cursor-pointer text-gray-600">
-        <input
-          type="checkbox"
-          checked={repeatsDaily}
-          onChange={() => setRepeatsDaily(!repeatsDaily)}
-          className="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-        />
-        Daily
-      </label>
 
-      {/* Submit Button */}
       <button
         type="submit"
         className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
       >
         Create
       </button>
+      <div className="flex w-full gap-4">
+        <label className="flex items-center gap-2 grow">
+          Estimation
+          <input
+            type="range"
+            id="temp"
+            name="temp"
+            list="markers"
+            min="0.25" // Set the minimum value
+            max="8" // Set the maximum value
+            step="0.25" // Define step size to match your `datalist`
+            value={estimation}
+            onChange={(e) => setEstimation(parseFloat(e.target.value))}
+            className="grow"
+          />
+          <datalist id="markers">
+            {[
+              0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5,
+              7, 7.5, 8,
+            ].map((val) => (
+              <option key={val} value={val}></option>
+            ))}
+          </datalist>
+          {estimation} hours
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-gray-600">
+          <input
+            type="checkbox"
+            checked={repeatsDaily}
+            onChange={() => setRepeatsDaily(!repeatsDaily)}
+            className="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          Daily
+        </label>
+      </div>
+
+      {/* Submit Button */}
     </form>
   );
 }
@@ -355,9 +348,13 @@ const TagsList = ({ activities }: { activities: Activity[] }) => {
         <Link
           key={tag}
           to={`/${tag}`}
-          className="px-3 py-1 my-2 bg-blue-100 text-blue-700 rounded-md text-sm hover:bg-blue-200 transition"
+          className={`px-3 py-1 my-2 rounded-md text-sm transition ${
+            tag === ""
+              ? "bg-blue-700 text-blue-100 hover:bg-red-600"
+              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+          }`}
         >
-          {tag || "Reset"}
+          {tag || "Show All"}
         </Link>
       ))}
     </div>
