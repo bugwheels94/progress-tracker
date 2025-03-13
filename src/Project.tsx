@@ -189,7 +189,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
       {/* Action Button */}
 
       {/* Activity Title */}
-      <h3 className="ml-4 text-lg font-semibold">{activity.title}</h3>
+      <h3 className="ml-4 py-6 text-lg font-semibold">{activity.title}</h3>
 
       {/* Time Spent */}
     </li>
