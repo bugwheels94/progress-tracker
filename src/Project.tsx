@@ -345,6 +345,7 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
 }
 
 const TagsList = ({ activities }: { activities: Activity[] }) => {
+  const { tag: current = "" } = useParams();
   const tags = useMemo(() => {
     const uniqueTags = new Set(
       [...activities.map((a) => a.tag)].filter(Boolean)
@@ -359,12 +360,12 @@ const TagsList = ({ activities }: { activities: Activity[] }) => {
           key={tag}
           to={`/${tag}`}
           className={`px-3 py-1 my-2 rounded-md text-sm transition ${
-            tag === ""
-              ? "bg-blue-700 text-blue-100 hover:bg-red-600"
-              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+            tag === current
+              ? "bg-red-600 text-blue-100 font-bold"
+              : "bg-blue-100 text-blue-700"
           }`}
         >
-          {tag || "Show All"}
+          {tag || (current === "" ? "Showing All" : "Show All")}
         </Link>
       ))}
     </div>
