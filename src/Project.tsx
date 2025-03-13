@@ -61,10 +61,8 @@ function Project() {
   const { tag = "" } = useParams();
 
   const { data: activities } = useQuery({
-    queryKey: ["projects", tag, "activities"],
-    queryFn: () => {
-      return getActivities(tag);
-    },
+    queryKey: ["projects", "activities"],
+    queryFn: getActivities,
   });
 
   const mood = useMemo(
@@ -82,6 +80,13 @@ function Project() {
         )
       ),
     [activities]
+  );
+  const filteredActivities = useMemo(
+    () =>
+      (activities || []).filter((activity) =>
+        tag ? activity.tag === tag : true
+      ),
+    [activities, tag]
   );
   useEffect(() => {
     document.body.style.backgroundColor = mood.color;
@@ -103,9 +108,12 @@ function Project() {
 
         {/* Activity List */}
         <div className="flex flex-row gap-4">
-          <ActivityList status={Status.Idle} activities={activities} />
-          <ActivityList status={Status.Active} activities={activities} />
-          <ActivityList status={Status.Done} activities={activities} />
+          <ActivityList status={Status.Idle} activities={filteredActivities} />
+          <ActivityList
+            status={Status.Active}
+            activities={filteredActivities}
+          />
+          <ActivityList status={Status.Done} activities={filteredActivities} />
         </div>
       </div>
     </>
@@ -142,8 +150,6 @@ function ActivityList({
 }
 
 function ActivityItem({ activity }: { activity: Activity }) {
-  const { tag = "" } = useParams();
-
   const handlers = useSwipeable({
     onSwiped: (eventData) => {
       const today = new Date().toLocaleDateString("en-CA");
@@ -181,11 +187,11 @@ function ActivityItem({ activity }: { activity: Activity }) {
     mutationFn: (doc: Partial<Activity>) => putActivity(doc, activity),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects", tag, "activities"],
+        queryKey: ["projects", "activities"],
       });
     },
   });
-  const { mutate: deleteActivity } = useDeleteActivity(tag);
+  const { mutate: deleteActivity } = useDeleteActivity();
   return (
     <li
       {...handlers}
@@ -201,12 +207,14 @@ function ActivityItem({ activity }: { activity: Activity }) {
       <span className="absolute right-1 top-1 bg-cyan-500 text-white px-3 py-1 rounded-md text-sm  ">
         {activity.estimation} hours
       </span>
+      <span className="absolute right-1 bottom-1 bg-fuchsia-500 text-white px-3 py-1 rounded-md text-sm  ">
+        {activity.tag}
+      </span>
       {/* Time Spent */}
     </li>
   );
 }
 export function ActivityForm({ activities }: { activities: Activity[] }) {
-  const { tag: tagParam = "" } = useParams();
   const [tag, setTag] = useState("");
   const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
   const [repeatsDaily, setRepeatsDaily] = useState(false);
@@ -227,7 +235,7 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
     mutationFn: putActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects", tagParam, "activities"],
+        queryKey: ["projects", "activities"],
       });
     },
   });
@@ -243,7 +251,7 @@ export function ActivityForm({ activities }: { activities: Activity[] }) {
         estimation,
       });
     },
-    [title, tag, repeatsDaily, estimation]
+    [activityMutation, tag, title, repeatsDaily, estimation]
   );
   return (
     <form

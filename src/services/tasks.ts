@@ -38,11 +38,9 @@ export function getActivityStatus(a: Activity) {
       : Status.Idle;
 }
 export type Activity = ReturnType<typeof createActivity> & { _rev?: string };
-export async function getActivities(tag: string): Promise<Activity[]> {
+export async function getActivities(): Promise<Activity[]> {
   try {
-    const docs = tag
-      ? await db.find({ selector: { tag } })
-      : await db.find({ selector: {} });
+    const docs = await db.find({ selector: {} });
 
     const docs2: Activity[] = docs.docs as Activity[];
 
@@ -86,13 +84,13 @@ export async function deleteActivity(activity: Activity) {
     console.error("Error deleting activity:", e);
   }
 }
-export const useDeleteActivity = (tag: string) => {
+export const useDeleteActivity = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteActivity,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["projects", tag, "activities"],
+        queryKey: ["projects", "activities"],
       });
     },
   });
