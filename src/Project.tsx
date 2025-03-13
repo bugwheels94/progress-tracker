@@ -90,7 +90,7 @@ function Project() {
   if (!activities) return <div>Loading...</div>;
   return (
     <>
-      <div className="max-w-3xl mx-auto p-6 bg-white bg-opacity-30  rounded-lg select-none">
+      <div className="container mx-auto my-4 p-6 bg-white bg-opacity-30 rounded-lg select-none">
         {/* Form Section */}
         <div className="flex flex-row items-center justify-center rounded-2xl ">
           <h2 className="text-xl font-semibold mb-2">Today's Mood</h2>
