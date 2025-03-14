@@ -19,6 +19,7 @@ function createActivity() {
   return {
     inProgress: false,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     estimation: 0,
     tag: "",
     title: "",
@@ -54,7 +55,6 @@ export async function getActivities(): Promise<Activity[]> {
       // If statuses are the same, sort by createdAt (earliest first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    console.log(docs2);
     return docs2;
   } catch (e) {
     console.error("Error fetching activities:", e);
@@ -69,6 +69,7 @@ export async function putActivity(
     await db.put({
       ...original,
       ...doc,
+      updatedAt: Date.now(),
     });
   } catch (e) {
     console.log(e);
@@ -95,3 +96,27 @@ export const useDeleteActivity = () => {
     },
   });
 };
+export async function handleExport() {
+  const docs = (await db.allDocs({ include_docs: true })).rows
+    .map((row) => row.doc as Activity) // Extract documents
+    .filter((doc) => !doc?._id.startsWith("_design/"));
+  return docs;
+}
+
+// export function handleImport({
+//   target: {
+//     files: [file],
+//   },
+// }) {
+//   if (file) {
+//     const reader = new FileReader();
+//     reader.onload = ({ target: { result } }) => {
+//       db.bulkDocs(
+//         JSON.parse(result),
+//         { new_edits: false }, // not change revision
+//         (...args) => console.log("DONE", args)
+//       );
+//     };
+//     reader.readAsText(file);
+//   }
+// }

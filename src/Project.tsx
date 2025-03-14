@@ -5,12 +5,20 @@ import {
   Activity,
   getActivities,
   getActivityStatus,
+  handleExport,
   putActivity,
   Status,
   useDeleteActivity,
 } from "./services/tasks";
 import { Link, useParams } from "react-router-dom";
 import { useSwipeable } from "react-swipeable";
+import {
+  googleLogout,
+  TokenResponse,
+  useGoogleLogin,
+} from "@react-oauth/google";
+import { getFileFromDrive, postStringToDrive } from "./services/drive";
+import { mergeArraysById } from "./utils/array";
 
 function emotionColorAndEmoji(percent: number) {
   percent = Math.max(0, Math.min(100, percent)); // Clamp between 0 and 100
@@ -55,7 +63,7 @@ function emotionColorAndEmoji(percent: number) {
     emoji = "😄"; // Very happy
   else emoji = "😁"; // Super happy
 
-  return { color: `rgb(${r}, ${g}, ${b})`, emoji };
+  return { color: `rgb(${r}, ${g}, ${b})`, emoji, score: percent };
 }
 function Project() {
   const { tag = "" } = useParams();
@@ -64,7 +72,10 @@ function Project() {
     queryKey: ["projects", "activities"],
     queryFn: getActivities,
   });
-
+  const [google, setGoogle] =
+    useState<
+      Omit<TokenResponse, "error" | "error_description" | "error_uri">
+    >();
   const mood = useMemo(
     () =>
       emotionColorAndEmoji(
@@ -81,6 +92,25 @@ function Project() {
       ),
     [activities]
   );
+
+  useEffect(() => {
+    (async function sync() {
+      const fileName = "progress-tracker-activities-readonly.json";
+      if (!google?.access_token) return;
+      const { data, fileId } = await getFileFromDrive({
+        accessToken: google?.access_token,
+        fileName,
+      });
+      const localData = await handleExport();
+      await postStringToDrive({
+        json: JSON.stringify(mergeArraysById(data, localData)),
+        accessToken: google?.access_token,
+        fileName,
+        fileId,
+      });
+      setTimeout(sync, 1000 * 60 * 60);
+    })();
+  }, [google?.access_token]);
   const filteredActivities = useMemo(
     () =>
       (activities || []).filter((activity) =>
@@ -91,15 +121,38 @@ function Project() {
   useEffect(() => {
     document.body.style.backgroundColor = mood.color;
   }, [mood]);
-
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => setGoogle(tokenResponse),
+    scope: "https://www.googleapis.com/auth/drive.file",
+  });
   if (!activities) return <div>Loading...</div>;
   return (
     <>
       <div className="container mx-auto my-4 p-6 bg-white bg-opacity-30 rounded-lg select-none">
         {/* Form Section */}
-        <div className="flex flex-row items-center justify-center rounded-2xl ">
-          <h2 className="text-xl font-semibold mb-2">Today's Mood</h2>
-          <div className="text-6xl">{mood.emoji}</div>
+        <div className="flex flex-row items-center justify-between rounded-2xl ">
+          <MoodCard {...mood} />
+
+          <button
+            onClick={() => {
+              if (google) login();
+              else googleLogout();
+            }}
+            className={`flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all ${
+              google
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
+            }`}
+          >
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png"
+              alt="Google Logo"
+              className="w-5 h-5"
+            />
+            {google
+              ? "Sign out and Stop Syncing"
+              : "Sign in with Google to Sync"}
+          </button>
         </div>
         <div className="mb-4">
           <ActivityForm activities={activities} />
@@ -126,19 +179,38 @@ function ActivityList({
   status: Status;
   activities: Activity[];
 }) {
+  const [isFinishedToday, setIsFinishedToday] = useState(false);
+
   const filteredActivities = useMemo(
     () =>
-      activities.filter((activity) => getActivityStatus(activity) === status),
-    [activities, status]
+      activities
+        .filter((activity) => getActivityStatus(activity) === status)
+        .filter((activity) => {
+          if (!isFinishedToday) return true;
+          return activity.finishedOn?.includes(
+            new Date().toLocaleDateString("en-CA")
+          );
+        }),
+    [activities, isFinishedToday, status]
   );
   return (
     <div className="flex flex-col flex-1 border border-gray-200 rounded-lg">
-      <h2 className="text-lg font-semibold px-4 py-2 bg-gray-100 border-b">
+      <h2 className="text-lg font-semibold px-4 py-2 bg-gray-100 border-b flex justify-between items-center">
         {status === Status.Idle
           ? "To Do"
           : status === Status.Active
             ? "In Progress"
             : "Done"}
+        {status === Status.Done && (
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-green-500"
+              onChange={(e) => setIsFinishedToday(e.target.checked)}
+            />
+            Finished Today
+          </label>
+        )}
       </h2>
       <ul className="flex flex-col flex-1">
         {filteredActivities.map((activity) => (
@@ -380,3 +452,16 @@ const TagsList = ({ activities }: { activities: Activity[] }) => {
   );
 };
 export default Project;
+function MoodCard({ emoji, score }: { emoji: string; score: number }) {
+  const normalizedScore = Math.round(score / 10);
+
+  return (
+    <div className="flex items-center gap-2 bg-gradient-to-r from-blue-400 to-purple-400 text-white font-semibold px-4 py-2 rounded-lg shadow-md">
+      <span className="text-lg">Today's Mood</span>
+      <span className="text-2xl">{emoji}</span>
+      <span className="text-lg">
+        {String(normalizedScore).padStart(2, "0")}/10
+      </span>
+    </div>
+  );
+}
