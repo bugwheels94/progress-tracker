@@ -29,15 +29,13 @@ export async function postStringToDrive({
     ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
     : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
 
-  const response = await fetch(url, {
+  await fetch(url, {
     method: fileId ? "PATCH" : "POST", // PATCH for update, POST for new
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
     body: formData,
   });
-
-  const result = await response.json();
 }
 
 export async function getFileFromDrive({
