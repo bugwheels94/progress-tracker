@@ -109,8 +109,10 @@ function Project() {
   );
 
   const queryClient = useQueryClient();
+  const [isSyncing, setIsSyncing] = useState(false);
   const sync = useCallback(
     async (access_token: string) => {
+      setIsSyncing(true);
       try {
         const fileName = "progress-tracker-activities-readonly.json";
         if (!access_token) return;
@@ -132,6 +134,8 @@ function Project() {
         });
       } catch (e) {
         console.error("Error syncing:", e);
+      } finally {
+        setIsSyncing(false);
       }
     },
     [queryClient]
@@ -169,9 +173,13 @@ function Project() {
             {google && (
               <button
                 onClick={() => sync(google)} // Replace with your actual sync function
-                className="flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all bg-blue-500 text-white hover:bg-blue-600"
+                className="relative px-5 py-2 rounded-lg shadow-md font-medium transition-all bg-blue-500 text-white hover:bg-blue-600"
               >
-                🔄 Sync Now
+                <span
+                  className={`transition-opacity ${isSyncing ? "opacity-50 animate-pulse" : "opacity-100"}`}
+                >
+                  Sync{isSyncing ? "ing" : ""} Now
+                </span>
               </button>
             )}
             <button
