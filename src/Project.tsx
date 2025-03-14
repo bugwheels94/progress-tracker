@@ -13,13 +13,10 @@ import {
 } from "./services/tasks";
 import { Link, useParams } from "react-router-dom";
 import { useSwipeable } from "react-swipeable";
-import {
-  googleLogout,
-  TokenResponse,
-  useGoogleLogin,
-} from "@react-oauth/google";
+import { googleLogout, useGoogleLogin } from "@react-oauth/google";
 import { getFileFromDrive, postStringToDrive } from "./services/drive";
 import { mergeArraysById } from "./utils/array";
+import { clearAuthCookie, getAuthCookie } from "./utils/cookie";
 
 function emotionColorAndEmoji(percent: number) {
   percent = Math.max(0, Math.min(100, percent)); // Clamp between 0 and 100
@@ -66,6 +63,7 @@ function emotionColorAndEmoji(percent: number) {
 
   return { color: `rgb(${r}, ${g}, ${b})`, emoji, score: percent };
 }
+
 function Project() {
   const { tag = "" } = useParams();
 
@@ -85,10 +83,14 @@ function Project() {
         .filter((doc) => !doc.deleted);
     },
   });
-  const [google, setGoogle] =
-    useState<
-      Omit<TokenResponse, "error" | "error_description" | "error_uri">
-    >();
+  const [google, setGoogle] = useState<string>(getAuthCookie());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGoogle(getAuthCookie());
+    }, 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
   const mood = useMemo(
     () =>
       emotionColorAndEmoji(
@@ -107,20 +109,20 @@ function Project() {
   );
 
   const queryClient = useQueryClient();
-  useEffect(() => {
-    (async function sync() {
+  const sync = useCallback(
+    async (access_token: string) => {
       try {
         const fileName = "progress-tracker-activities-readonly.json";
-        if (!google?.access_token) return;
+        if (!access_token) return;
         const { data, fileId } = await getFileFromDrive({
-          accessToken: google?.access_token,
+          accessToken: access_token,
           fileName,
         });
         const localData = await handleExport();
         const finalData = mergeArraysById(data, localData);
         await postStringToDrive({
           json: JSON.stringify(finalData),
-          accessToken: google?.access_token,
+          accessToken: access_token,
           fileName,
           fileId,
         });
@@ -130,11 +132,10 @@ function Project() {
         });
       } catch (e) {
         console.error("Error syncing:", e);
-      } finally {
-        setTimeout(sync, 1000 * 60 * 60);
       }
-    })();
-  }, [google?.access_token, queryClient]);
+    },
+    [queryClient]
+  );
   const filteredActivities = useMemo(
     () =>
       (activities || []).filter((activity) =>
@@ -146,7 +147,14 @@ function Project() {
     document.body.style.backgroundColor = mood.color;
   }, [mood]);
   const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => setGoogle(tokenResponse),
+    onSuccess: (tokenResponse) => {
+      const expiryDate = new Date(
+        Date.now() + tokenResponse.expires_in * 1000
+      ).toUTCString();
+      document.cookie = `access_token=${tokenResponse.access_token}; expires=${expiryDate}; path=/; Secure; SameSite=Lax`;
+      setGoogle(tokenResponse.access_token);
+      sync(tokenResponse.access_token);
+    },
     scope: "https://www.googleapis.com/auth/drive.file",
   });
   if (!activities) return <div>Loading...</div>;
@@ -157,26 +165,37 @@ function Project() {
         <div className="flex flex-row items-center justify-between rounded-2xl ">
           <MoodCard {...mood} />
 
-          <button
-            onClick={() => {
-              if (google) googleLogout();
-              else login();
-            }}
-            className={`flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all ${
-              google
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
-            }`}
-          >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png"
-              alt="Google Logo"
-              className="w-5 h-5"
-            />
-            {google
-              ? "Sign out and Stop Syncing"
-              : "Sign in with Google to Sync"}
-          </button>
+          <div className="flex gap-4 flex-row">
+            {google && (
+              <button
+                onClick={() => sync(google)} // Replace with your actual sync function
+                className="flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all bg-blue-500 text-white hover:bg-blue-600"
+              >
+                🔄 Sync Now
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (google) {
+                  googleLogout();
+                  clearAuthCookie();
+                  setGoogle("");
+                } else login();
+              }}
+              className={`flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all ${
+                google
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
+              }`}
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png"
+                alt="Google Logo"
+                className="w-5 h-5"
+              />
+              {google ? "Sign out" : "Sign in with Google to Sync"}
+            </button>
+          </div>
         </div>
         <div className="mb-4">
           <ActivityForm activities={activities} />
