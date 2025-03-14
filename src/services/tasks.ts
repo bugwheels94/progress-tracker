@@ -116,7 +116,8 @@ export async function handleExport() {
       delete doc._rev;
       return doc;
     }) // Extract documents
-    .filter((doc) => !doc?._id.startsWith("_design/"));
+    .filter((doc) => !doc?._id.startsWith("_design/"))
+    .filter(Boolean) as Activity[]; // Filter out design docs
   return docs;
 }
 
