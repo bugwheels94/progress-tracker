@@ -135,8 +135,8 @@ function Project() {
 
           <button
             onClick={() => {
-              if (google) login();
-              else googleLogout();
+              if (google) googleLogout();
+              else login();
             }}
             className={`flex items-center gap-3 px-5 py-2 rounded-lg shadow-md font-medium transition-all ${
               google
