@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   Activity,
   getActivities,
   getActivityStatus,
   handleExport,
+  handleImport,
   putActivity,
   Status,
   useDeleteActivity,
@@ -93,24 +99,35 @@ function Project() {
     [activities]
   );
 
+  const queryClient = useQueryClient();
   useEffect(() => {
     (async function sync() {
-      const fileName = "progress-tracker-activities-readonly.json";
-      if (!google?.access_token) return;
-      const { data, fileId } = await getFileFromDrive({
-        accessToken: google?.access_token,
-        fileName,
-      });
-      const localData = await handleExport();
-      await postStringToDrive({
-        json: JSON.stringify(mergeArraysById(data, localData)),
-        accessToken: google?.access_token,
-        fileName,
-        fileId,
-      });
-      setTimeout(sync, 1000 * 60 * 60);
+      try {
+        const fileName = "progress-tracker-activities-readonly.json";
+        if (!google?.access_token) return;
+        const { data, fileId } = await getFileFromDrive({
+          accessToken: google?.access_token,
+          fileName,
+        });
+        const localData = await handleExport();
+        const finalData = mergeArraysById(data, localData);
+        await postStringToDrive({
+          json: JSON.stringify(finalData),
+          accessToken: google?.access_token,
+          fileName,
+          fileId,
+        });
+        await handleImport({ data: finalData });
+        queryClient.invalidateQueries({
+          queryKey: ["projects", "activities"],
+        });
+      } catch (e) {
+        console.error("Error syncing:", e);
+      } finally {
+        setTimeout(sync, 1000 * 60 * 60);
+      }
     })();
-  }, [google?.access_token]);
+  }, [google?.access_token, queryClient]);
   const filteredActivities = useMemo(
     () =>
       (activities || []).filter((activity) =>

@@ -4,8 +4,19 @@ import PouchDB from "pouchdb";
 import find from "pouchdb-find";
 
 PouchDB.plugin(find);
-const db = new PouchDB<ReturnType<typeof createActivity>>("activities");
-db.createIndex({
+const db = {
+  instance: new PouchDB<Activity>("activities"),
+};
+function initDatabase() {
+  db.instance = new PouchDB<Activity>("activities");
+  db.instance.createIndex({
+    index: {
+      fields: ["status", "createdAt"],
+    },
+  });
+  return db;
+}
+db.instance.createIndex({
   index: {
     fields: ["status", "createdAt"],
   },
@@ -41,7 +52,7 @@ export function getActivityStatus(a: Activity) {
 export type Activity = ReturnType<typeof createActivity> & { _rev?: string };
 export async function getActivities(): Promise<Activity[]> {
   try {
-    const docs = await db.find({ selector: {} });
+    const docs = await db.instance.find({ selector: {} });
 
     const docs2: Activity[] = docs.docs as Activity[];
 
@@ -66,7 +77,7 @@ export async function putActivity(
   original: Activity = createActivity()
 ) {
   try {
-    await db.put({
+    await db.instance.put({
       ...original,
       ...doc,
       updatedAt: Date.now(),
@@ -80,7 +91,7 @@ export async function deleteActivity(activity: Activity) {
     return;
   }
   try {
-    await db.remove(activity._id, activity._rev); // Delete using id and rev
+    await db.instance.remove(activity._id, activity._rev); // Delete using id and rev
   } catch (e) {
     console.error("Error deleting activity:", e);
   }
@@ -97,26 +108,20 @@ export const useDeleteActivity = () => {
   });
 };
 export async function handleExport() {
-  const docs = (await db.allDocs({ include_docs: true })).rows
-    .map((row) => row.doc as Activity) // Extract documents
+  const docs = (await db.instance.allDocs({ include_docs: true })).rows
+    .map((row) => {
+      if (!row.doc) return null;
+      const doc = row.doc as Activity;
+
+      delete doc._rev;
+      return doc;
+    }) // Extract documents
     .filter((doc) => !doc?._id.startsWith("_design/"));
   return docs;
 }
 
-// export function handleImport({
-//   target: {
-//     files: [file],
-//   },
-// }) {
-//   if (file) {
-//     const reader = new FileReader();
-//     reader.onload = ({ target: { result } }) => {
-//       db.bulkDocs(
-//         JSON.parse(result),
-//         { new_edits: false }, // not change revision
-//         (...args) => console.log("DONE", args)
-//       );
-//     };
-//     reader.readAsText(file);
-//   }
-// }
+export async function handleImport({ data }: { data: Activity[] }) {
+  await db.instance.destroy();
+  initDatabase();
+  return db.instance.bulkDocs(data);
+}
