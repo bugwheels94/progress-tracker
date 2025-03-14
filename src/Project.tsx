@@ -72,6 +72,18 @@ function Project() {
   const { data: activities } = useQuery({
     queryKey: ["projects", "activities"],
     queryFn: getActivities,
+    select: (data) => {
+      return data
+        .sort((a, b) => {
+          if (!a || !b) return 0;
+
+          // If statuses are the same, sort by createdAt (earliest first)
+          return (
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+        })
+        .filter((doc) => !doc.deleted);
+    },
   });
   const [google, setGoogle] =
     useState<

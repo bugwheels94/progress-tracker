@@ -49,23 +49,24 @@ export function getActivityStatus(a: Activity) {
       ? Status.Done
       : Status.Idle;
 }
-export type Activity = ReturnType<typeof createActivity> & { _rev?: string };
+export type Activity = ReturnType<typeof createActivity> & {
+  _rev?: string;
+  deleted?: boolean;
+};
 export async function getActivities(): Promise<Activity[]> {
   try {
-    const docs = await db.instance.find({ selector: {} });
+    // const docs = await db.instance.find({ selector: {} });
+    const docs = (await db.instance.allDocs({ include_docs: true })).rows
+      .map((row) => {
+        if (!row.doc) return null;
+        const doc = row.doc as Activity;
+        return doc;
+      })
+      .filter((doc) => !doc?._id.startsWith("_design/"))
+      .filter(Boolean) as Activity[];
 
-    const docs2: Activity[] = docs.docs as Activity[];
+    const docs2: Activity[] = docs;
 
-    docs2.sort((a, b) => {
-      if (!a || !b) return 0;
-      const statusComparison = getActivityStatus(a) - getActivityStatus(b);
-      if (statusComparison !== 0) {
-        return statusComparison;
-      }
-
-      // If statuses are the same, sort by createdAt (earliest first)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
     return docs2;
   } catch (e) {
     console.error("Error fetching activities:", e);
@@ -91,7 +92,7 @@ export async function deleteActivity(activity: Activity) {
     return;
   }
   try {
-    await db.instance.remove(activity._id, activity._rev); // Delete using id and rev
+    await putActivity({ deleted: true }, activity);
   } catch (e) {
     console.error("Error deleting activity:", e);
   }
@@ -108,16 +109,10 @@ export const useDeleteActivity = () => {
   });
 };
 export async function handleExport() {
-  const docs = (await db.instance.allDocs({ include_docs: true })).rows
-    .map((row) => {
-      if (!row.doc) return null;
-      const doc = row.doc as Activity;
-
-      delete doc._rev;
-      return doc;
-    }) // Extract documents
-    .filter((doc) => !doc?._id.startsWith("_design/"))
-    .filter(Boolean) as Activity[]; // Filter out design docs
+  const docs = (await getActivities()).map((doc) => {
+    delete doc._rev;
+    return doc;
+  });
   return docs;
 }
 
