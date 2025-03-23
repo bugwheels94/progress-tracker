@@ -102,7 +102,7 @@ function Project() {
             )
             .reduce((acc, a) => acc + (a.estimation || 0), 0) *
             100) /
-            8
+            5
         )
       ),
     [activities]
