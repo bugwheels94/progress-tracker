@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  createEmptyActivity,
   getActivities,
   getActivityStatus,
   handleExport,
   handleImport,
-  putActivity,
   Status,
-  useDeleteActivity,
 } from "./services/tasks";
 import { Link, useParams } from "react-router-dom";
-import { useSwipeable } from "react-swipeable";
 import { googleLogout, useGoogleLogin } from "@react-oauth/google";
 import { getFileFromDrive, postStringToDrive } from "./services/drive";
 import { mergeArraysById } from "./utils/array";
 import { clearAuthCookie, getAuthCookie } from "./utils/cookie";
+import { ActivityForm } from "./ActivityForm";
+import { ActivityList } from "./ActivityList";
+import { DailyTarget, MoodCard, OverdueModal } from "./MoodCard";
+import { getTargetFromQuery } from "./utils/target";
+import { PleaseWorkModal } from "./PleaseWorkModal";
 
 function emotionColorAndEmoji(percent: number) {
   percent = Math.max(0, Math.min(100, percent)); // Clamp between 0 and 100
@@ -72,15 +75,19 @@ function Project() {
     queryFn: getActivities,
     select: (data) => {
       return data
+        .filter((doc) => !doc.deleted)
+        .map((activity) => {
+          return { ...activity, status: getActivityStatus(activity) };
+        })
         .sort((a, b) => {
           if (!a || !b) return 0;
 
+          if (a.status !== b.status) return a.status - b.status;
           // If statuses are the same, sort by createdAt (earliest first)
           return (
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
-        })
-        .filter((doc) => !doc.deleted);
+        });
     },
   });
   const [google, setGoogle] = useState<string>(getAuthCookie());
@@ -102,7 +109,7 @@ function Project() {
             )
             .reduce((acc, a) => acc + (a.estimation || 0), 0) *
             100) /
-            5
+            getTargetFromQuery()
         )
       ),
     [activities]
@@ -121,7 +128,12 @@ function Project() {
           fileName,
         });
         const localData = await handleExport();
-        const finalData = mergeArraysById(data, localData);
+        const finalData = mergeArraysById(data, localData).map((data) => {
+          return {
+            ...createEmptyActivity(),
+            ...data,
+          };
+        });
         await postStringToDrive({
           json: JSON.stringify(finalData),
           accessToken: access_token,
@@ -161,14 +173,27 @@ function Project() {
     },
     scope: "https://www.googleapis.com/auth/drive.file",
   });
+  const [activityToEdit, setActivityToEdit] = useState<Activity>();
+  const [canPlayAudio, setCanPlayAudio] = useState(false);
+
   if (!activities) return <div>Loading...</div>;
+  if (!canPlayAudio)
+    return (
+      <h1 className="text-9xl" onClick={() => setCanPlayAudio(true)}>
+        Click Here to ENTER!
+      </h1>
+    );
+
   return (
     <>
+      <PleaseWorkModal activities={activities} />
+      <OverdueModal activities={activities} />
       <div className="container mx-auto my-4 p-6 bg-white bg-opacity-30 rounded-lg select-none">
         {/* Form Section */}
         <div className="flex flex-row items-center justify-between rounded-2xl ">
-          <MoodCard {...mood} />
-
+          <div className="flex gap-3">
+            <MoodCard {...mood} /> <DailyTarget />
+          </div>
           <div className="flex gap-4 flex-row">
             {google && (
               <button
@@ -206,272 +231,35 @@ function Project() {
           </div>
         </div>
         <div className="mb-4">
-          <ActivityForm activities={activities} />
+          <ActivityForm
+            activities={activities}
+            key={activityToEdit?._id}
+            current={activityToEdit}
+            onSubmit={() => setActivityToEdit(undefined)}
+          />
         </div>
         <TagsList activities={activities} />
 
         {/* Activity List */}
         <div className="flex flex-row gap-4">
-          <ActivityList status={Status.Idle} activities={filteredActivities} />
           <ActivityList
-            status={Status.Active}
+            status={[Status.Idle, Status.Due]}
             activities={filteredActivities}
+            onContextMenu={(activity) => setActivityToEdit(activity)}
           />
-          <ActivityList status={Status.Done} activities={filteredActivities} />
+          <ActivityList
+            status={[Status.Active]}
+            activities={filteredActivities}
+            onContextMenu={(activity) => setActivityToEdit(activity)}
+          />
+          <ActivityList
+            status={[Status.Done]}
+            activities={filteredActivities}
+            onContextMenu={(activity) => setActivityToEdit(activity)}
+          />
         </div>
       </div>
     </>
-  );
-}
-function ActivityList({
-  activities,
-  status,
-}: {
-  status: Status;
-  activities: Activity[];
-}) {
-  const [isFinishedToday, setIsFinishedToday] = useState(false);
-
-  const filteredActivities = useMemo(
-    () =>
-      activities
-        .filter((activity) => getActivityStatus(activity) === status)
-        .filter((activity) => {
-          if (!isFinishedToday) return true;
-          return activity.finishedOn?.includes(
-            new Date().toLocaleDateString("en-CA")
-          );
-        }),
-    [activities, isFinishedToday, status]
-  );
-  return (
-    <div className="flex flex-col flex-1 border border-gray-200 rounded-lg">
-      <h2 className="text-lg font-semibold px-4 py-2 bg-gray-100 border-b flex justify-between items-center">
-        {status === Status.Idle
-          ? "To Do"
-          : status === Status.Active
-            ? "In Progress"
-            : "Done"}
-        {status === Status.Done && (
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              className="w-4 h-4 accent-green-500"
-              onChange={(e) => setIsFinishedToday(e.target.checked)}
-            />
-            Finished Today
-          </label>
-        )}
-      </h2>
-      <ul className="flex flex-col flex-1">
-        {filteredActivities.map((activity) => (
-          <ActivityItem key={activity._id} activity={activity} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ActivityItem({ activity }: { activity: Activity }) {
-  const handlers = useSwipeable({
-    onSwiped: (eventData) => {
-      const today = new Date().toLocaleDateString("en-CA");
-      if (eventData.dir === "Right") {
-        if (activity.inProgress) {
-          mutate({
-            finishedOn: [...(activity.finishedOn || []), today],
-            inProgress: false,
-          });
-        } else if (!activity.inProgress) {
-          mutate({
-            inProgress: true,
-          });
-        }
-      }
-      if (eventData.dir === "Left") {
-        if (activity.inProgress) {
-          mutate({
-            inProgress: false,
-          });
-        } else if (activity.finishedOn?.includes(today)) {
-          mutate({
-            finishedOn: (activity.finishedOn || []).filter(
-              (day) => day !== today
-            ),
-            inProgress: true,
-          });
-        }
-      }
-    },
-    trackMouse: true,
-  });
-  const queryClient = useQueryClient();
-  const { mutate } = useMutation({
-    mutationFn: (doc: Partial<Activity>) => putActivity(doc, activity),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["projects", "activities"],
-      });
-    },
-  });
-  const { mutate: deleteActivity } = useDeleteActivity();
-  return (
-    <li
-      {...handlers}
-      key={activity._id}
-      className="flex items-center p-1 border-b last:border-none hover:bg-gray-100 transition relative"
-      onDoubleClick={() => {
-        deleteActivity(activity);
-      }}
-    >
-      {/* Action Button */}
-      {/* Activity Title */}
-      <h3 className="ml-4 py-6 text-lg font-semibold">{activity.title}</h3>
-      <span className="absolute right-1 top-1 bg-cyan-500 text-white px-3 py-1 rounded-md text-sm  ">
-        {activity.estimation} hours
-      </span>
-      <span className="absolute right-1 bottom-1 bg-fuchsia-500 text-white px-3 py-1 rounded-md text-sm  ">
-        {activity.tag}
-      </span>
-      {/* Time Spent */}
-    </li>
-  );
-}
-export function ActivityForm({ activities }: { activities: Activity[] }) {
-  const [tag, setTag] = useState("");
-  const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
-  const [repeatsDaily, setRepeatsDaily] = useState(false);
-  const [title, setTitle] = useState("");
-  const [estimation, setEstimation] = useState(1);
-
-  const suggestions = useMemo(() => {
-    if (!tag) return [];
-
-    const uniqueTags = new Set(
-      [tag, ...activities.map((a) => a.tag)].filter(Boolean)
-    );
-
-    return Array.from(uniqueTags);
-  }, [tag, activities]);
-  const queryClient = useQueryClient();
-  const activityMutation = useMutation({
-    mutationFn: putActivity,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["projects", "activities"],
-      });
-    },
-  });
-  const greet = useCallback(
-    async function greet() {
-      // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-      // setGreetMsg(await invoke("greet", { name }));
-
-      activityMutation.mutate({
-        tag,
-        title,
-        repeatsDaily,
-        estimation,
-      });
-    },
-    [activityMutation, tag, title, repeatsDaily, estimation]
-  );
-  return (
-    <form
-      className="flex flex-row gap-2 p-2 rounded-xl w-full mx-auto flex-wrap align-center"
-      onSubmit={(e) => {
-        e.preventDefault();
-        greet();
-      }}
-    >
-      {/* Activity Input */}
-      <input
-        autoComplete="off"
-        spellCheck={false}
-        id="greet-input"
-        onChange={(e) => setTitle(e.currentTarget.value)}
-        placeholder="Create new activity..."
-        className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 grow"
-      />
-
-      {/* Tag Input with Auto-Suggest */}
-      <div className="relative z-10">
-        <input
-          type="text"
-          value={tag}
-          onChange={(e) => setTag(e.target.value)}
-          onFocus={() => {
-            setIsSuggestionVisible(true);
-          }}
-          onBlur={() => {
-            setTimeout(() => setIsSuggestionVisible(false), 100);
-          }}
-          placeholder="Add a tag..."
-          className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
-        />
-        {suggestions.length > 0 && isSuggestionVisible && (
-          <ul className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg mt-1  overflow-hidden">
-            {suggestions.map((suggestion) => (
-              <li
-                key={suggestion}
-                onClick={() => {
-                  setTag(suggestion);
-                }}
-                className="p-3 cursor-pointer hover:bg-gray-100 text-gray-700"
-              >
-                {suggestion}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Repeat Daily Toggle */}
-
-      <button
-        type="submit"
-        className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-      >
-        Create
-      </button>
-      <div className="flex w-full gap-4">
-        <label className="flex items-center gap-2 grow">
-          Estimation
-          <input
-            type="range"
-            id="temp"
-            name="temp"
-            list="markers"
-            min="0.25" // Set the minimum value
-            max="8" // Set the maximum value
-            step="0.25" // Define step size to match your `datalist`
-            value={estimation}
-            onChange={(e) => setEstimation(parseFloat(e.target.value))}
-            className="grow"
-          />
-          <datalist id="markers">
-            {[
-              0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5,
-              7, 7.5, 8,
-            ].map((val) => (
-              <option key={val} value={val}></option>
-            ))}
-          </datalist>
-          {estimation} hours
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer text-gray-600">
-          <input
-            type="checkbox"
-            checked={repeatsDaily}
-            onChange={() => setRepeatsDaily(!repeatsDaily)}
-            className="w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          Daily
-        </label>
-      </div>
-
-      {/* Submit Button */}
-    </form>
   );
 }
 
@@ -503,16 +291,3 @@ const TagsList = ({ activities }: { activities: Activity[] }) => {
   );
 };
 export default Project;
-function MoodCard({ emoji, score }: { emoji: string; score: number }) {
-  const normalizedScore = Math.round(score / 10);
-
-  return (
-    <div className="flex items-center gap-2 bg-gradient-to-r from-blue-400 to-purple-400 text-white font-semibold px-4 py-2 rounded-lg shadow-md">
-      <span className="text-lg">Today's Mood</span>
-      <span className="text-2xl">{emoji}</span>
-      <span className="text-lg">
-        {String(normalizedScore).padStart(2, "0")}/10
-      </span>
-    </div>
-  );
-}

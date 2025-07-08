@@ -13,7 +13,6 @@ export function mergeArraysById(arr1: Activity[], arr2: Activity[]) {
       mergedMap.set(item._id, item);
     }
   });
-  console.log(arr1, arr2);
 
   return Array.from(mergedMap.values());
 }
