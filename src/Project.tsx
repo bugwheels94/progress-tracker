@@ -179,9 +179,28 @@ function Project() {
   if (!activities) return <div>Loading...</div>;
   if (!canPlayAudio)
     return (
-      <h1 className="text-9xl" onClick={() => setCanPlayAudio(true)}>
-        Click Here to ENTER!
-      </h1>
+      <div className="flex text-xl flex-col items-center justify-center min-h-screen bg-gray-100 text-center px-4 relative">
+        <div>
+          <h2 className="text-2xl mb-4 font-semibold text-gray-800">
+            Welcome to the Progress Tracker
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Click the button below to start and enable sound.
+          </p>
+          <button
+            onClick={() => setCanPlayAudio(true)}
+            className="p-6 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition text-4xl"
+          >
+            Start Experience
+          </button>
+        </div>
+
+        {/* Footer disclaimer */}
+        <footer className="absolute bottom-4 text-xs text-gray-500">
+          This application does not collect any personal data. Audio is played
+          locally for your experience only.
+        </footer>
+      </div>
     );
 
   return (

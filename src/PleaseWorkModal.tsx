@@ -57,6 +57,7 @@ export function PleaseWorkModal({
   const [showModal, setShowModal] = useState("");
 
   useEffect(() => {
+    if (!activities.length) return;
     const checkReminder = () => {
       const { remainingWork, neededUtilization } = getWorkSummary(
         activities,
