@@ -182,7 +182,7 @@ function Project() {
       <div className="flex text-xl flex-col items-center justify-center min-h-screen bg-gray-100 text-center px-4 relative">
         <div>
           <h2 className="text-2xl mb-4 font-semibold text-gray-800">
-            Welcome to the Progress Tracker
+            Welcome to the Milestone
           </h2>
           <p className="text-gray-600 mb-6">
             Click the button below to start and enable sound.

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ActivityWithStatus, Status } from "./services/tasks";
 import { getFrequencyFromQuery, getTargetFromQuery } from "./utils/target";
 import { WarningModal } from "./WarningModal";
@@ -36,11 +36,12 @@ export function OverdueModal({
   activities: ActivityWithStatus[];
 }) {
   const [showModal, setShowModal] = useState(false);
+  const hasOverdue = useMemo(
+    () => activities.some((a) => a.status === Status.Due),
+    [activities]
+  );
   useEffect(() => {
     const checkOverdue = () => {
-      const hasOverdue = (activities || []).some(
-        (a) => a.status === Status.Due
-      );
       if (hasOverdue) setShowModal(true);
     };
 
@@ -52,7 +53,7 @@ export function OverdueModal({
     ); // every 30 minutes
 
     return () => clearInterval(interval);
-  }, [activities]);
+  }, [hasOverdue]);
 
   return (
     <WarningModal

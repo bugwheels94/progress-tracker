@@ -37,7 +37,7 @@ export const Checkboxes: React.FC<Props> = ({
   };
 
   return (
-    <div className=" flex items-center justify-between items-center">
+    <div className=" flex items-center justify-between items-center flex-wrap">
       <span className="pr-5">Select Day of Week</span>
       {selectAll && (
         <label className="inline-flex items-center mr-2">

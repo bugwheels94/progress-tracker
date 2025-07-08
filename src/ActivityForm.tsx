@@ -60,7 +60,7 @@ export function ActivityForm({
           id="submit-input"
           value={activity.title}
           onChange={(e) =>
-            setActivity((a) => ({ ...a, title: e.currentTarget.value }))
+            setActivity((a) => ({ ...a, title: e.target.value }))
           }
           placeholder="Create new activity..."
           className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 grow"
@@ -72,7 +72,7 @@ export function ActivityForm({
             type="text"
             value={activity.tag}
             onChange={(e) =>
-              setActivity((a) => ({ ...a, tag: e.currentTarget.value }))
+              setActivity((a) => ({ ...a, tag: e.target.value }))
             }
             onFocus={() => {
               setIsSuggestionVisible(true);
@@ -88,7 +88,7 @@ export function ActivityForm({
               {suggestions.map((suggestion) => (
                 <li
                   key={suggestion}
-                  onClick={() => {
+                  onMouseDown={() => {
                     setActivity((a) => ({ ...a, tag: suggestion }));
                   }}
                   className="p-3 cursor-pointer hover:bg-gray-100 text-gray-700"

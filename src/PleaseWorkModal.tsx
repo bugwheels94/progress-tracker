@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WarningModal } from "./WarningModal"; // assuming this exists
 import { ActivityWithStatus } from "./services/tasks";
 import {
@@ -12,6 +12,7 @@ function getWorkSummary(
   eodTime: number,
   targetTime: number
 ) {
+  if (!activities.length) return null;
   const now = new Date();
   const currentHour = now.getHours();
   const today = now.toISOString().slice(0, 10);
@@ -56,14 +57,14 @@ export function PleaseWorkModal({
 }) {
   const [showModal, setShowModal] = useState("");
 
+  const workSummary = useMemo(
+    () => getWorkSummary(activities, eodTime, targetTime),
+    [activities, eodTime, targetTime]
+  );
   useEffect(() => {
-    if (!activities.length) return;
+    if (!workSummary) return;
     const checkReminder = () => {
-      const { remainingWork, neededUtilization } = getWorkSummary(
-        activities,
-        eodTime,
-        targetTime
-      );
+      const { remainingWork, neededUtilization } = workSummary;
 
       if (neededUtilization > 1)
         // Customize threshold
@@ -83,7 +84,7 @@ export function PleaseWorkModal({
     );
 
     return () => clearInterval(interval);
-  }, [activities, eodTime, targetTime]);
+  }, [workSummary]);
 
   return (
     <WarningModal

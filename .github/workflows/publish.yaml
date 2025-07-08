@@ -26,11 +26,6 @@ jobs:
       - run: npm i
       - run: npm run build
       - run: npm install netlify-cli -g
-      # - run: zip -r dist.zip dist
-      # - run: npx semantic-release
-      #   env:
-      #     HUSKY: 0
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: netlify deploy --dir=dist --prod --site my-milestone
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
