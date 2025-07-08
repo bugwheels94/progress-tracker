@@ -45,10 +45,9 @@ function getWorkSummary(
     neededUtilization,
   };
 }
-
 export function PleaseWorkModal({
   activities,
-  eodTime = getEodTimeFromQuery(), // 1am default
+  eodTime = getEodTimeFromQuery(), // e.g., 1am
   targetTime = getTargetFromQuery(), // hours
 }: {
   activities: ActivityWithStatus[];
@@ -61,17 +60,31 @@ export function PleaseWorkModal({
     () => getWorkSummary(activities, eodTime, targetTime),
     [activities, eodTime, targetTime]
   );
+
   useEffect(() => {
     if (!workSummary) return;
+
     const checkReminder = () => {
+      const now = new Date();
+      const currentHour = now.getHours() + now.getMinutes() / 60;
+      const endQuietHour = (eodTime + 9) % 24;
+
+      const isInQuietPeriod =
+        eodTime < endQuietHour
+          ? currentHour >= eodTime && currentHour < endQuietHour
+          : currentHour >= eodTime || currentHour < endQuietHour;
+
+      if (isInQuietPeriod) {
+        setShowModal(""); // suppress during quiet hours
+        return;
+      }
+
       const { remainingWork, neededUtilization } = workSummary;
 
       if (neededUtilization > 1)
-        // Customize threshold
         setShowModal("Please keep working. Target has slipped though!");
       else if (remainingWork > 0) {
         if (neededUtilization > 0.75)
-          // Customize threshold
           setShowModal("Please start working. Target is slipping!");
       }
     };
@@ -84,7 +97,7 @@ export function PleaseWorkModal({
     );
 
     return () => clearInterval(interval);
-  }, [workSummary]);
+  }, [workSummary, eodTime]);
 
   return (
     <WarningModal

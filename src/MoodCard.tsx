@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { ActivityWithStatus, Status } from "./services/tasks";
-import { getFrequencyFromQuery, getTargetFromQuery } from "./utils/target";
+import {
+  getEodTimeFromQuery,
+  getFrequencyFromQuery,
+  getTargetFromQuery,
+} from "./utils/target";
 import { WarningModal } from "./WarningModal";
 
 export function MoodCard({ emoji, score }: { emoji: string; score: number }) {
@@ -32,17 +36,37 @@ export const DailyTarget: React.FC = () => {
 };
 export function OverdueModal({
   activities,
+  eodTime = getEodTimeFromQuery(), // default 1am
 }: {
   activities: ActivityWithStatus[];
+  eodTime?: number;
 }) {
   const [showModal, setShowModal] = useState(false);
+
   const hasOverdue = useMemo(
     () => activities.some((a) => a.status === Status.Due),
     [activities]
   );
+
   useEffect(() => {
     const checkOverdue = () => {
-      if (hasOverdue) setShowModal(true);
+      const now = new Date();
+      const currentHour = now.getHours() + now.getMinutes() / 60;
+      const endQuietHour = (eodTime + 9) % 24;
+
+      const isInQuietPeriod =
+        eodTime < endQuietHour
+          ? currentHour >= eodTime && currentHour < endQuietHour
+          : currentHour >= eodTime || currentHour < endQuietHour;
+
+      if (isInQuietPeriod) {
+        setShowModal(false); // hide if within quiet period
+        return;
+      }
+
+      if (hasOverdue) {
+        setShowModal(true);
+      }
     };
 
     checkOverdue(); // initial check
@@ -50,10 +74,10 @@ export function OverdueModal({
     const interval = setInterval(
       checkOverdue,
       getFrequencyFromQuery() * 60 * 1000
-    ); // every 30 minutes
+    );
 
     return () => clearInterval(interval);
-  }, [hasOverdue]);
+  }, [hasOverdue, eodTime]);
 
   return (
     <WarningModal
