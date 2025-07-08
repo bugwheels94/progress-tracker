@@ -58,8 +58,11 @@ export function PleaseWorkModal({
 
   useEffect(() => {
     const checkReminder = () => {
-      const { remainingWork, neededUtilization, remainingHours } =
-        getWorkSummary(activities, eodTime, targetTime);
+      const { remainingWork, neededUtilization } = getWorkSummary(
+        activities,
+        eodTime,
+        targetTime
+      );
 
       if (neededUtilization > 1)
         // Customize threshold

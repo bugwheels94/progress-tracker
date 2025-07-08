@@ -16,7 +16,7 @@ export function WarningModal({
       const audio = new Audio(soundUrl);
       audio.loop = true;
 
-      audio.play().catch((e) => {});
+      audio.play().catch();
 
       const timer = setTimeout(() => {
         onClose?.();
