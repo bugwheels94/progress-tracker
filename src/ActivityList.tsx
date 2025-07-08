@@ -32,7 +32,7 @@ export function ActivityList({
         }),
     [activities, isFinishedToday, status]
   );
-  if (status[0] === Status.Done) console.log(filteredActivities);
+  if (status[0] === Status.Idle) console.log(filteredActivities);
   return (
     <div className="flex flex-col flex-1 border border-gray-200 rounded-lg">
       <h2 className="text-lg font-semibold px-4 py-2 bg-gray-100 border-b flex justify-between items-center">

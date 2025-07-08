@@ -61,7 +61,6 @@ export function PleaseWorkModal({
       const { remainingWork, neededUtilization, remainingHours } =
         getWorkSummary(activities, eodTime, targetTime);
 
-      console.log(remainingWork, neededUtilization, remainingHours);
       if (neededUtilization > 1)
         // Customize threshold
         setShowModal("Please keep working. Target has slipped though!");
