@@ -1,5 +1,5 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Checkboxes } from "./Checkboxes";
 import { MonthDaySelect } from "./MonthDaySelect";
 import { Activity, createEmptyActivity, putActivity } from "./services/tasks";
