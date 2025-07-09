@@ -83,11 +83,12 @@ export function getActivityStatus({
 
   if (matchesPattern(todayDate, pattern, finishedOn)) {
     if (finishedSet.has(todayStr)) return Status.Done;
-    else if (missed.length > 0) return Status.Due;
-    else return Status.Idle;
+    if (missed.length > 0) return Status.Due;
+    return Status.Idle;
   } else {
     if (missed.length > 0) return Status.Due;
-    else return Status.Done;
+    if (missed.length === 0 && finishedOn.length === 0) return Status.Idle;
+    return Status.Done;
   }
 }
 function getDatesBetween(start: string, end: string): string[] {

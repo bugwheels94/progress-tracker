@@ -69,7 +69,7 @@ export function OverdueModal({
       }
     };
 
-    checkOverdue(); // initial check
+    setTimeout(checkOverdue, 5 * 1000);
 
     const interval = setInterval(
       checkOverdue,

@@ -1,5 +1,5 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Checkboxes } from "./Checkboxes";
 import { MonthDaySelect } from "./MonthDaySelect";
 import { Activity, createEmptyActivity, putActivity } from "./services/tasks";
@@ -32,6 +32,7 @@ export function ActivityForm({
       queryClient.invalidateQueries({
         queryKey: ["projects", "activities"],
       });
+      setActivity(createEmptyActivity());
       onSubmit();
     },
   });
@@ -114,7 +115,7 @@ export function ActivityForm({
           id="temp"
           name="temp"
           list="markers"
-          min="0.25" // Set the minimum value
+          min="0.0" // Set the minimum value
           max="8" // Set the maximum value
           step="0.25" // Define step size to match your `datalist`
           value={activity.estimation}

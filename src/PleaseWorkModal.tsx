@@ -89,7 +89,7 @@ export function PleaseWorkModal({
       }
     };
 
-    checkReminder();
+    setTimeout(checkReminder, 5 * 1000);
 
     const interval = setInterval(
       checkReminder,
